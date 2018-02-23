@@ -191,7 +191,7 @@ cga_putc(int c)
 		break;
 	}
 
-	// What is the purpose of this?
+	// Exercise 8, Lab 1. To implement line break in console.
 	if (crt_pos >= CRT_SIZE) {
 		int i;
 
