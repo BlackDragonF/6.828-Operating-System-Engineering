@@ -83,6 +83,7 @@ trap_init(void)
     void alignment_check_handler();
     void machine_check_handler();
     void simd_floating_point_error_handler();
+    void syscall_handler();
 
     // set up trap gate descriptor
 	SETGATE(idt[T_DIVIDE],	 1, GD_KT, divide_error_handler,           	   0);
@@ -103,6 +104,7 @@ trap_init(void)
     SETGATE(idt[T_ALIGN],    1, GD_KT, alignment_check_handler,            0);
     SETGATE(idt[T_MCHK],     1, GD_KT, machine_check_handler,              0);
     SETGATE(idt[T_SIMDERR],  1, GD_KT, simd_floating_point_error_handler,  0);
+    SETGATE(idt[T_SYSCALL],  0, GD_KT, syscall_handler,                    3);
 
 	// Per-CPU setup
 	trap_init_percpu();
@@ -182,6 +184,14 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+    if (tf->tf_trapno == T_PGFLT) {
+        // dispatch page fault exceptions
+        page_fault_handler(tf);
+    }
+    if (tf->tf_trapno == T_BRKPT) {
+        // dispatch breakpoint exceptions
+        monitor(tf);
+    }
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
