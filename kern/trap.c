@@ -194,16 +194,12 @@ trap_dispatch(struct Trapframe *tf)
     }
     if (tf->tf_trapno == T_SYSCALL) {
         // dispatch syscall interrupts
-        // use GCC inline assemble to construct stack frame
-        asm volatile(
-            "\tpush %esi\n"
-            "\tpush %edi\n"
-            "\tpush %ebx\n"
-            "\tpush %ecx\n"
-            "\tpush %edx\n"
-            "\tpush %eax\n"
-            "\tcall syscall\n"
-        );
+        // using register's value in env's TrapFrame
+        // DON'T use inline assemble directly, it can be changed during
+        // function calling
+        tf->tf_regs.reg_eax = syscall(tf->tf_regs.reg_eax, tf->tf_regs.reg_edx, tf->tf_regs.reg_ecx,
+                tf->tf_regs.reg_ebx, tf->tf_regs.reg_edi, tf->tf_regs.reg_esi);
+
         // return
         return;
     }
@@ -268,6 +264,10 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+    if ((tf->tf_cs & 3) == 0) {
+        // code that causes page fault in kernel mode
+        panic("page fault in kernel!");
+    }
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.

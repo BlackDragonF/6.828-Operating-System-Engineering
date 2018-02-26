@@ -65,7 +65,7 @@ TRAPHANDLER_NOEC(floating_point_error_handler, T_FPERR)
 TRAPHANDLER(alignment_check_handler, T_ALIGN)
 TRAPHANDLER_NOEC(machine_check_handler, T_MCHK)
 TRAPHANDLER_NOEC(simd_floating_point_error_handler, T_SIMDERR)
-TRAPHANDLER(syscall_handler, T_SYSCALL)
+TRAPHANDLER_NOEC(syscall_handler, T_SYSCALL)
 
 /*
  * Lab 3: Your code here for _alltraps

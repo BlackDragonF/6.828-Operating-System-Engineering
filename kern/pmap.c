@@ -445,7 +445,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 				// get physical address of physical page
 				physaddr_t page_pa = page2pa(page);
 				// insert page table into page directory
-				pgdir[pgdir_index] = page_pa | PTE_W | PTE_P;
+				pgdir[pgdir_index] = page_pa | PTE_U | PTE_W | PTE_P;
 				// NB: returns KERNEL VIRTUAL ADDRESS here, for 0-4M is NOT writable
 				return (pte_t *)page2kva(page) + pgtable_index;
 			}
@@ -638,7 +638,37 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
+    if ((uintptr_t)va >= ULIM) {
+        // condition 1 - below ULIM violated
+        user_mem_check_addr = (uintptr_t)va;
+        return -E_FAULT;
+    }
 
+    uintptr_t va_start = (uintptr_t)ROUNDDOWN(va, PGSIZE);
+    uintptr_t va_end = (uintptr_t)ROUNDUP(va + len, PGSIZE);
+
+    for (; va_start < va_end ; va_start += PGSIZE) {
+        // note we set page directory entry with less restrict
+        // we will only test page table entry here
+        pte_t * pgtable_entry_ptr = pgdir_walk(env->env_pgdir, (char *)va_start, false);
+        if ((*pgtable_entry_ptr & (perm | PTE_P)) != (perm | PTE_P)) {
+            // condition 2 - permission violated
+            if (va_start <= (uintptr_t)va) {
+                // va lie in the first page and not aligned, return va
+                user_mem_check_addr = (uintptr_t)va;
+            } else if (va_start >= (uintptr_t)va + len) {
+                // va lie in the last page and exceed va + len, return va + len
+                user_mem_check_addr = (uintptr_t)va + len;
+            } else {
+                // return corresponding page's initial address
+                user_mem_check_addr = va_start;
+            }
+
+            return -E_FAULT;
+        }
+    }
+
+    // pass user memory check
 	return 0;
 }
 

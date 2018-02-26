@@ -71,10 +71,11 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// LAB 3: Your code here.
 
 	// panic("syscall not implemented");
-    cprintf("%d\n", syscallno);
 
 	switch (syscallno) {
     case SYS_cputs:
+        // checks memory before use sys_cputs to dereference a1
+        user_mem_assert(curenv, (char *)a1, (size_t)a2, PTE_U);
         // call sys_cputs
         sys_cputs((const char *)a1, (size_t)a2);
         break;
