@@ -290,6 +290,15 @@ mem_init_mp(void)
 	//     Permissions: kernel RW, user NONE
 	//
 	// LAB 4: Your code here:
+    size_t i;
+
+    for (i = 0 ; i < NCPU ; i++) {
+        // traverser through 0 to NCPU to use boot_map_region to map
+        // per-CPU's kernel stack to corresponding va
+        uintptr_t kstacktop_i = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+        boot_map_region(kern_pgdir, kstacktop_i - KSTKSIZE , KSTKSIZE,
+                        PADDR(percpu_kstacks[i]), PTE_W | PTE_P);
+    }
 
 }
 
@@ -334,7 +343,14 @@ page_init(void)
 	// initialize from page 1 to page npages_basemem - 1
 	// set pp_ref to 0, set pp_link to last page_free_list
 	// and then update page_free_list
+
+    // Lab 4: remove page at MPENTRY_PADDR
+    size_t mp_entry_page = PGNUM(MPENTRY_PADDR);
+
 	for(i = 1 ; i < npages_basemem ; i++) {
+        if (i == mp_entry_page) {
+            continue;
+        }
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
@@ -680,7 +696,21 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+    size = ROUNDUP(size, PGSIZE);
+    if (base + size > MMIOLIM) {
+        // reservation overflog MMIOLIM
+        panic("reservation bytes overflows!");
+    }
+
+    // use boot_map_region to map [pa, pa + size) to [base, base + size)
+    boot_map_region(kern_pgdir, base, size, pa, PTE_W | PTE_PCD | PTE_PWT);
+
+    // update base and return
+    uintptr_t saved_base = base;
+    base += size;
+    return (char *)saved_base;
+
+	// panic("mmio_map_region not implemented");
 }
 
 static uintptr_t user_mem_check_addr;
@@ -932,7 +962,7 @@ check_kern_pgdir(void)
 
 	// check phys mem
 	for (i = 0; i < npages * PGSIZE; i += PGSIZE)
-		assert(check_va2pa(pgdir, KERNBASE + i) == i);
+    	assert(check_va2pa(pgdir, KERNBASE + i) == i);
 
 	// check kernel stack
 	// (updated in lab 4 to check per-CPU kernel stacks)
