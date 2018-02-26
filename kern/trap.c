@@ -192,6 +192,21 @@ trap_dispatch(struct Trapframe *tf)
         // dispatch breakpoint exceptions
         monitor(tf);
     }
+    if (tf->tf_trapno == T_SYSCALL) {
+        // dispatch syscall interrupts
+        // use GCC inline assemble to construct stack frame
+        asm volatile(
+            "\tpush %esi\n"
+            "\tpush %edi\n"
+            "\tpush %ebx\n"
+            "\tpush %ecx\n"
+            "\tpush %edx\n"
+            "\tpush %eax\n"
+            "\tcall syscall\n"
+        );
+        // return
+        return;
+    }
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
