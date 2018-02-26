@@ -60,6 +60,7 @@ bootmain(void)
 	((void (*)(void)) (ELFHDR->e_entry))();
 
 bad:
+	// stops simulation and breaks into the debug console
 	outw(0x8A00, 0x8A00);
 	outw(0x8A00, 0x8E00);
 	while (1)
@@ -101,6 +102,17 @@ waitdisk(void)
 	// wait for disk reaady
 	while ((inb(0x1F7) & 0xC0) != 0x40)
 		/* do nothing */;
+	// 0x1F7 Disk 0 status
+	// Status register:
+	/* bit 6    : RDY bit. indicates that the disk has finished its
+             power-up. Wait for this bit to be active before doing
+             anything (execpt reset) with the disk. I once ignored
+             this bit and was rewarded with a completely unusable
+             disk.
+	  bit 7    : BSY bit. This bit is set when the disk is doing
+             something for you. You have to wait for this bit to
+             clear before you can start giving orders to the disk. */
+	// MASK: 11000000
 }
 
 void
@@ -109,17 +121,33 @@ readsect(void *dst, uint32_t offset)
 	// wait for disk to be ready
 	waitdisk();
 
-	outb(0x1F2, 1);		// count = 1
-	outb(0x1F3, offset);
-	outb(0x1F4, offset >> 8);
-	outb(0x1F5, offset >> 16);
-	outb(0x1F6, (offset >> 24) | 0xE0);
+	outb(0x1F2, 1);		// count = 1 0x1F2 Disk 0 sector count
+	// Read one sector each time
+	outb(0x1F3, offset); // Disk 0 sector number
+	// First sector's number
+	outb(0x1F4, offset >> 8); // Cylinder low
+	outb(0x1F5, offset >> 16); // Cylinder high
+	// Cylinder number
+	outb(0x1F6, (offset >> 24) | 0xE0); // Disk 0 drive/head
+	// MASK 11100000
+	// Drive/Head Register: bit 7 and bit 5 should be set to 1
+	// Bit6: 1 LBA mode, 0 CHS mode
 	outb(0x1F7, 0x20);	// cmd 0x20 - read sectors
+	/*20H       Read sector with retry. NB: 21H = read sector
+                without retry. For this command you have to load
+                the complete circus of cylinder/head/sector
+                first. When the command completes (DRQ goes
+                active) you can read 256 words (16-bits) from the
+                disk's data register. */
+
 
 	// wait for disk to be ready
 	waitdisk();
 
 	// read a sector
 	insl(0x1F0, dst, SECTSIZE/4);
+	// Data register: data exchange with 8/16 bits
+	// insl port addr cnt: read cnt dwords from the input port
+	// specified by port into the supplied output array addr.
+	// dword: 4 bytes
 }
-
