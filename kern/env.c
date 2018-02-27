@@ -573,6 +573,8 @@ env_run(struct Env *e)
     // address space switch
     // reference from inc/x86.h
     lcr3(PADDR(e->env_pgdir));
+    // release kernel lock here
+    unlock_kernel();
 	// drop into user mode
 	env_pop_tf(&(e->env_tf));
 

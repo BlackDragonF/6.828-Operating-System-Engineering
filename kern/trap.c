@@ -304,10 +304,12 @@ trap(struct Trapframe *tf)
 	assert(!(read_eflags() & FL_IF));
 
 	if ((tf->tf_cs & 3) == 3) {
-		// Trapped from user mode.
+        // Trapped from user mode.
 		// Acquire the big kernel lock before doing any
 		// serious kernel work.
 		// LAB 4: Your code here.
+        lock_kernel();
+
 		assert(curenv);
 
 		// Garbage collect if current enviroment is a zombie

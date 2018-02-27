@@ -48,8 +48,9 @@ i386_init(void)
 	// Lab 4 multitasking initialization functions
 	pic_init();
 
-	// Acquire the big kernel lock before waking up APs
+    // Acquire the big kernel lock before waking up APs
 	// Your code here:
+    lock_kernel();
 
 	// Starting non-boot CPUs
 	boot_aps();
@@ -111,11 +112,14 @@ mp_main(void)
 	trap_init_percpu();
 	xchg(&thiscpu->cpu_status, CPU_STARTED); // tell boot_aps() we're up
 
-	// Now that we have finished some basic setup, call sched_yield()
+    // Now that we have finished some basic setup, call sched_yield()
 	// to start running processes on this CPU.  But make sure that
 	// only one CPU can enter the scheduler at a time!
 	//
 	// Your code here:
+    // lock the kernel and start running enviroments
+    lock_kernel();
+    sched_yield();
 
 	// Remove this after you finish Exercise 6
 	for (;;);
