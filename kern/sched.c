@@ -11,7 +11,7 @@ void sched_halt(void);
 void
 sched_yield(void)
 {
-	struct Env *idle;
+	struct Env *idle = NULL;
 
 	// Implement simple round-robin scheduling.
 	//
@@ -28,10 +28,51 @@ sched_yield(void)
 	// no runnable environments, simply drop through to the code
 	// below to halt the cpu.
 
-	// LAB 4: Your code here.
+    // LAB 4: Your code here.
+    // get index from current CPU's env
+    size_t env_index;
+    // set curenv_flag to default true
+    int curenv_flag = true;
 
-	// sched_halt never returns
-	sched_halt();
+    size_t i;
+    if(thiscpu->cpu_env == NULL) {
+        // no previous running environment
+        // start at beginning of envs array
+        i = 0;
+        env_index = NENV - 1;
+        // mark curenv_flag as true
+        curenv_flag = false;
+    } else {
+        // start at previous running environment
+        i = (env_index == NENV - 1) ? 0 : env_index + 1;
+        env_index = ENVX(thiscpu->cpu_env->env_id);
+    }
+    // traverse through envs list to find first ENV_RUNNABLE
+    // env
+    for (; i != env_index ; i = ((i == NENV - 1) ? 0 : i + 1)) {
+        if (envs[i].env_status == ENV_RUNNABLE) {
+            // found, set idle and break from loop
+            idle = &envs[i];
+            break;
+        }
+    }
+
+    // if idle is NULL and curenv_flag is true,
+    // means no envs are runnable and last previous running env is ENV_RUNNING
+    // check if last previous environment is ENV_RUNNING,
+    // if so, choose it.
+    if (!idle && curenv_flag && envs[env_index].env_status == ENV_RUNNING) {
+        idle = &envs[env_index];
+    }
+
+    if (idle) {
+        // idle env choosed, run it directly
+        env_run(idle);
+    } else {
+        // failed to choose idle env, halt CPU
+        // sched_halt never returns
+	    sched_halt();
+    }
 }
 
 // Halt this CPU when there is nothing to do. Wait until the
@@ -81,4 +122,3 @@ sched_halt(void)
 		"jmp 1b\n"
 	: : "a" (thiscpu->cpu_ts.ts_esp0));
 }
-

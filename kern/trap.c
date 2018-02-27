@@ -312,7 +312,7 @@ trap(struct Trapframe *tf)
 
 		assert(curenv);
 
-		// Garbage collect if current enviroment is a zombie
+		// Garbage collect if current environment is a zombie
 		if (curenv->env_status == ENV_DYING) {
 			env_free(curenv);
 			curenv = NULL;
