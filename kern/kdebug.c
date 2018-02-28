@@ -142,7 +142,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 		// Make sure this memory is valid.
 		// Return -1 if it is not.  Hint: Call user_mem_check.
 		// LAB 3: Your code here.
-        if (user_mem_check(curenv, usd, sizeof(struct UserStabData *), PTE_U) < 0) {
+        if (user_mem_check(curenv, usd, sizeof(struct UserStabData), PTE_U) < 0) {
             return -1;
         }
 

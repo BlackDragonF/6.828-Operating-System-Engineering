@@ -752,6 +752,7 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
         pte_t * pgtable_entry_ptr = pgdir_walk(env->env_pgdir, (char *)va_start, false);
         // if pgtable_entry_ptr is NULL, then also fail the check
         if (!pgtable_entry_ptr) {
+            user_mem_check_addr = (uintptr_t)va;
             return -E_FAULT;
         }
         if ((*pgtable_entry_ptr & (perm | PTE_P)) != (perm | PTE_P)) {

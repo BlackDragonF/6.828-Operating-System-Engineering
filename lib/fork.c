@@ -25,6 +25,9 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+    if (((pde_t *)uvpd)[PDX(addr)] & (PTE_U | PTE_P)) {
+
+    }
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -78,7 +81,17 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	panic("fork not implemented");
+    // use set_pgfault_handler to install pgfault() as page fault handler
+    set_pgfault_handler(pgfault);
+
+    // use system call to create new blank child environment
+    envid_t child_env_id = sys_exofork();
+
+
+
+	// panic("fork not implemented");
+
+    return child_env_id;
 }
 
 // Challenge!
