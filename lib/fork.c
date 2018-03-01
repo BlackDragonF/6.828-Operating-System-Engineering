@@ -28,6 +28,8 @@ pgfault(struct UTrapframe *utf)
     // use uvpt to get PTE and check premissions
     if (!(err & FEC_WR) ||
         !(((pte_t *)uvpt)[PGNUM(addr)] & PTE_COW)) {
+        cprintf("error addr: %x\n", addr);
+        cprintf("error_code: %d\n", err);
         panic("fault isn't write or PTE is not marked as PTE_COW or both!");
     }
 
@@ -152,7 +154,12 @@ fork(void)
 
     // use system call to create new blank child environment
     envid_t child_env_id = sys_exofork();
-    if (child_env_id <= 0) {
+    if (child_env_id == 0) {
+        // must update thisenv to make sure user program behave
+        // normally
+        thisenv = envs + ENVX(sys_getenvid());
+    }
+    if (child_env_id < 0) {
         // error when create new environment, simply return
         return child_env_id;
     }

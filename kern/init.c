@@ -125,7 +125,7 @@ mp_main(void)
     sched_yield();
 
 	// Remove this after you finish Exercise 6
-	for (;;);
+	// for (;;);
 }
 
 /*

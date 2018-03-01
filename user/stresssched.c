@@ -36,4 +36,3 @@ umain(int argc, char **argv)
 	cprintf("[%08x] stresssched on CPU %d\n", thisenv->env_id, thisenv->env_cpunum);
 
 }
-

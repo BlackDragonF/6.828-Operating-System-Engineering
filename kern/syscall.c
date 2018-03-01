@@ -390,7 +390,76 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+    // check for existence of env with envid
+    struct Env * env;
+    if (envid2env(envid, &env, false) < 0) {
+        // environment envid doesn't currently exist
+        return -E_BAD_ENV;
+    }
+
+    // check receiver's status
+    if (!env->env_ipc_recving) {
+        // envid is not currently blocked in sys_ipc_recv
+        // or another environment managed to send first
+        return -E_IPC_NOT_RECV;
+    }
+
+    if ((uintptr_t)srcva < UTOP) {
+        // srcva is valid
+        // check srcva is page-aligned
+        if (PGOFF(srcva) != 0) {
+            // srcva is not page-aligned
+            return -E_INVAL;
+        }
+        // check perm passed in
+        if ((perm & (~PTE_SYSCALL)) || !(perm & PTE_U) || !(perm & PTE_P)) {
+            // invalid perm
+            return -E_INVAL;
+        }
+        // check srcva actually be mapped
+        pte_t * pgtable_entry;
+        struct PageInfo * page;
+        if ((page = page_lookup(curenv->env_pgdir, srcva, &pgtable_entry)) == NULL) {
+            // NB: check for SRCVA here, so use curenv->env_pgdir
+            // srcva is not mapped at caller's address space
+            return -E_INVAL;
+        }
+        // check PTE_W between sender and receiver
+        if ((perm & PTE_W) && (!((*pgtable_entry) & PTE_W))) {
+            // if perm has PTE_W while srcva is read-only in
+            // current environment's address space
+            return -E_INVAL;
+        }
+
+        if ((uintptr_t)(env->env_ipc_dstva) < UTOP) {
+            // receiver also expects page to be transferred
+            // call page_insert to actually transer the page
+            if (page_insert(env->env_pgdir, page, env->env_ipc_dstva, perm) < 0) {
+                // out of memory when try to insert page
+                return -E_NO_MEM;
+            }
+            // page successfully transferred
+            env->env_ipc_perm = perm;
+        }
+    } else {
+        // srcva >= UTOP
+        // invalid srcva, but we won't return error here
+        // ipc_send will panic if we do so
+    }
+
+    // update receiver's information
+    env->env_ipc_recving = false;
+    env->env_ipc_from = curenv->env_id;
+    env->env_ipc_value = value;
+    // mark receiver to be runnable to match what we do in sys_ipc_recv
+    env->env_status = ENV_RUNNABLE;
+    // modify trapframe's eax register to `update' return value
+    env->env_tf.tf_regs.reg_eax = 0;
+
+	// panic("sys_ipc_try_send not implemented");
+
+    // ipc succeeds
+    return 0;
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -408,7 +477,27 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+    // similar to sys_ipc_try_send, will not mark an error
+    // if dstva >= UTOP
+    if ((uintptr_t)dstva < UTOP && PGOFF(dstva) != 0) {
+        // if dstva < UTOP but dstva is not page-aligned
+        // NB: && rather than ||, we won't report error
+        // when dstva >= UTOP
+        return -E_INVAL;
+    }
+
+    // mark calling environment as not runnable
+    curenv->env_status = ENV_NOT_RUNNABLE;
+    // update status to mark receiver is willing to receive message
+    curenv->env_ipc_recving = true;
+    curenv->env_ipc_dstva = dstva;
+
+    // give up cpu
+    sys_yield();
+
+	// panic("sys_ipc_recv not implemented");
+
+    // ipc succeeds
 	return 0;
 }
 
@@ -469,6 +558,13 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         // call sys_page_unmap
         return sys_page_unmap((envid_t)a1, (void *)a2);
         break;
+    case SYS_ipc_recv:
+        // call sys_ipc_recv
+        return sys_ipc_recv((void *)a1);
+        break;
+    case SYS_ipc_try_send:
+        // call sys_ipc_try_send
+        return sys_ipc_try_send((envid_t)a1, (uint32_t)a2, (void *)a3, (unsigned)a4);
 	default:
 		return -E_INVAL;
 	}
