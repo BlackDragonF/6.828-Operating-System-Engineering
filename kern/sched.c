@@ -44,8 +44,10 @@ sched_yield(void)
         curenv_flag = false;
     } else {
         // start at previous running environment
-        i = (env_index == NENV - 1) ? 0 : env_index + 1;
         env_index = ENVX(thiscpu->cpu_env->env_id);
+        // NB: don't mess with code order here, must first retrieve
+        // env_index then increment
+        i = (env_index == NENV - 1) ? 0 : env_index + 1;
     }
     // traverse through envs list to find first ENV_RUNNABLE
     // env

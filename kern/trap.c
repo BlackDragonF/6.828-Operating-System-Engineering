@@ -397,7 +397,7 @@ page_fault_handler(struct Trapframe *tf)
     uintptr_t utf_addr;
 
     // check tf->tf_esp's location to calculate utf's address
-    if (tf->tf_esp >= UXSTACKTOP - PGSIZE || tf->tf_esp < UXSTACKTOP) {
+    if ((tf->tf_esp >= UXSTACKTOP - PGSIZE) && (tf->tf_esp < UXSTACKTOP)) {
         // recursive case
         // reason why here needs to substract a 4-byte word
         // is to reserve space for reset eip/esp
