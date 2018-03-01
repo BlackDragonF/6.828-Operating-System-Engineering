@@ -16,10 +16,7 @@ umain(int argc, char **argv)
 
 	if ((who = fork()) == 0) {
 		// Child
-        int r;
-		if((r = ipc_recv(&who, TEMP_ADDR_CHILD, 0)) < 0) {
-            cprintf("ERROR1! - %e\n", r);
-        }
+		ipc_recv(&who, TEMP_ADDR_CHILD, 0);
 		cprintf("%x got message: %s\n", who, TEMP_ADDR_CHILD);
 		if (strncmp(TEMP_ADDR_CHILD, str1, strlen(str1)) == 0)
 			cprintf("child received correct message\n");
@@ -34,9 +31,7 @@ umain(int argc, char **argv)
 	memcpy(TEMP_ADDR, str1, strlen(str1) + 1);
 	ipc_send(who, 0, TEMP_ADDR, PTE_P | PTE_W | PTE_U);
 
-	if (ipc_recv(&who, TEMP_ADDR, 0) < 0) {
-        cprintf("ERROR2!\n");
-    }
+	ipc_recv(&who, TEMP_ADDR, 0);
 	cprintf("%x got message: %s\n", who, TEMP_ADDR);
 	if (strncmp(TEMP_ADDR, str2, strlen(str2)) == 0)
 		cprintf("parent received correct message\n");
